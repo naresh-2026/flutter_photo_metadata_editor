@@ -5,11 +5,9 @@ import 'flavors/flavor_config.dart';
 
 void main() async {
   const flavor = String.fromEnvironment("flavor", defaultValue: "dev");
-
   await dotenv.load(
     fileName: getEnvFileName(flavor),
   );
-
   FlavorConfig.initialize(flavorString: flavor);
   startApp();
 }

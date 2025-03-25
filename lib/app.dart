@@ -26,7 +26,6 @@ void startApp() async {
     final license = await rootBundle.loadString('assets/google_fonts/OFL.txt');
     yield LicenseEntryWithLineBreaks(['google_fonts'], license);
   });
-
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale("en", "US"), Locale("hi", "IN")],
@@ -43,16 +42,14 @@ Future initialiseApp({bool test = false}) async {
   final bindings = WidgetsFlutterBinding.ensureInitialized();
 
   bindings.deferFirstFrame();
-
   _initialiseGetIt();
-
-  await Future.wait([
-    _initSharedPreferences(),
-    EasyLocalization.ensureInitialized(),
-  ]);
-
+_initSharedPreferences();
+EasyLocalization.ensureInitialized();
+  // await Future.wait([
+  //   _initSharedPreferences(),
+  //   EasyLocalization.ensureInitialized(),
+  // ]);
   EasyLocalization.logger.printer = customEasyLogger;
-
   if (!kIsWeb && Platform.isAndroid) {
     try {
       FlutterDisplayMode.setHighRefreshRate();
@@ -60,7 +57,9 @@ Future initialiseApp({bool test = false}) async {
       log.e(exception);
     }
   }
-
+  else if(kIsWeb){
+    FlutterDisplayMode.setHighRefreshRate();
+  }
   bindings.allowFirstFrame();
 }
 
