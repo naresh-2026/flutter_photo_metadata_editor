@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_template/presentation/base/svg_provider/svg_provider.dart';
 import '../../../../../base/widgets/responsive/responsive_builder.dart';
+import 'svg_image_viewer.dart'; // Import the viewer screen
 
 class HomePageBody extends ConsumerWidget {
   const HomePageBody({
@@ -21,25 +22,65 @@ class HomePageBody extends ConsumerWidget {
     } else {
       return ResponsiveBuilder(
         builder: (context, mediaQueryData, boxConstraints) {
-          final columns =
-          mediaQueryData.orientation == Orientation.landscape ? 2 : 1;
-          return GridView.count( // Changed from UIList to GridView.count
+          final columns = mediaQueryData.orientation == Orientation.landscape ? 2 : 1;
+          return GridView.count(
             crossAxisCount: columns,
             children: svgThumbnails.map((svgString) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                      border: Border.fromBorderSide(BorderSide(width: 2.0,color: Colors.white),)),
-                  child: SvgPicture.string(
-                    svgString,
-                    // width: 100,
-                    // height: 100,
+              return GestureDetector(
+                onTap: () async {
+                  // Navigate to ImageViewer and wait for the modified SVG
+                  final updatedSvg = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ImageViewer(svgString: svgString),
+                    ),
+                  );
+
+                  // If ImageViewer returns updated SVG, modify the original list
+                  if (updatedSvg != null) {
+                    await ref.read(svgProvider.notifier).updateSvg(svgString, updatedSvg);
+                    ref.invalidate(svgProvider);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SvgPicture.string(svgString),
                   ),
                 ),
               );
-            }).toList().reversed.toList(), // Use svgThumbnails instead of items
+            }).toList().reversed.toList(),
           );
-    });}
+        },
+      );
+    }
+    // {
+    //   return ResponsiveBuilder(
+    //     builder: (context, mediaQueryData, boxConstraints) {
+    //       final columns =
+    //       mediaQueryData.orientation == Orientation.landscape ? 2 : 1;
+    //       return GridView.count( // Changed from UIList to GridView.count
+    //         crossAxisCount: columns,
+    //         children: svgThumbnails.map((svgString) {
+    //           return Padding(
+    //             padding: const EdgeInsets.all(16.0),
+    //             child: Container(
+    //               decoration: BoxDecoration(
+    //                   border: Border.fromBorderSide(BorderSide(width: 2.0,color: Colors.white),)),
+    //               child: SvgPicture.string(
+    //                 svgString,
+    //                 // width: 100,
+    //                 // height: 100,
+    //               ),
+    //             ),
+    //           );
+    //         }).toList().reversed.toList(), // Use svgThumbnails instead of items
+    //       );
+    // });}
   }
 }
+

@@ -22,6 +22,17 @@ class SVGNotifier extends StateNotifier<List<String>> {
     await _box.add(svgString);
     _loadSVGThumbnails();
   }
+
+  Future<void> updateSvg(String oldSvg, String newSvg) async {
+  int index = state.indexOf(oldSvg);
+  if (index != -1) {
+    print("updating the metadata");
+    await _box.putAt(index, newSvg); // Save to Hive
+    state = _box.values.toList();
+    //await _loadSVGThumbnails(); // Reload UI
+    }
+    print("done");
+  }
 }
 
 final svgProvider = StateNotifierProvider<SVGNotifier, List<String>>((ref) {
