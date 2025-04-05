@@ -103,6 +103,7 @@ bool _isRenderingAttribute(String attribute) {
     'fill', 'stroke', 'stroke-width', 'opacity', 'transform',
     'scale', 'rotate', 'translate', 'skewX', 'skewY'
   };
+  return true;
 
   return renderingAttributes.contains(attribute);
 }

@@ -4,10 +4,15 @@ import 'package:xml/xml.dart';
 
 class EditorScreen extends StatefulWidget {
   final String svgString;
-  final Map<String, String> metadata; // Receive metadata
-  final Function(String) onSave; // Callback function to save edited SVG
+  final Map<String, String> metadata;
+  final Function(String) onSave;
 
-  const EditorScreen({super.key, required this.svgString, required this.metadata,required this.onSave});
+  const EditorScreen({
+    super.key,
+    required this.svgString,
+    required this.metadata,
+    required this.onSave,
+  });
 
   @override
   _EditorScreenState createState() => _EditorScreenState();
@@ -17,7 +22,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late XmlDocument svgDocument;
   late String updatedSvgString;
   Map<String, String> editableMetadata = {};
-    Map<String, TextEditingController> textControllers = {}; // Store controllers
+  Map<String, TextEditingController> textControllers = {};
 
   @override
   void initState() {
@@ -29,61 +34,105 @@ class _EditorScreenState extends State<EditorScreen> {
   void _parseSvg() {
     svgDocument = XmlDocument.parse(widget.svgString);
     updatedSvgString = widget.svgString;
-    editableMetadata = Map.from(widget.metadata); // Make a copy for editing
-
-    // final rootElement = svgDocument.rootElement;
-    // final attributes = rootElement.attributes;
-
-    // for (var attr in attributes) {
-    //   if (attr.name.toString().startsWith("custom_")) {
-    //     editableMetadata[attr.name.toString()] = attr.value;
-    //   }
-    // }
+    editableMetadata = Map.from(widget.metadata);
   }
-  
+
   void _initializeControllers() {
     for (var entry in editableMetadata.entries) {
       textControllers[entry.key] = TextEditingController(text: entry.value);
     }
   }
+
   void _updateMetadata(String key, String value) {
     setState(() {
       editableMetadata[key] = value;
 
-      // Update the SVG XML
-    //   final rootElement = svgDocument.rootElement;
-    //   rootElement.setAttribute(key, value);
-    // Update the XML document with new values
       for (var element in svgDocument.findAllElements('path')) {
-        for (var attribute in element.attributes) {
-          if (attribute.name.toString() == "custom_$key") {
-            element.setAttribute("custom_$key", value);
-          }
+        if (element.getAttribute(key) != null) {
+          element.setAttribute(key, value);
         }
       }
+
       updatedSvgString = svgDocument.toXmlString(pretty: true);
+      print("String$updatedSvgString");
     });
+  }
+void _showAddMetadataDialog() {
+  final keyController = TextEditingController();
+  final valueController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Add Metadata'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: keyController,
+            decoration: const InputDecoration(labelText: 'Key (without custom_)'),
+          ),
+          TextField(
+            controller: valueController,
+            decoration: const InputDecoration(labelText: 'Value'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final rawKey = keyController.text.trim();
+            final value = valueController.text.trim();
+
+            if (rawKey.isNotEmpty && value.isNotEmpty) {
+              final key = "custom_$rawKey";
+
+              //final value1 = value.replaceAll('"', "'"); // Prevent XML-breaking double quotes
+              textControllers[key] = TextEditingController(text: value);
+              setState(() {
+                editableMetadata[key] = value;
+
+                for (var element in svgDocument.findAllElements('path')) {
+                  element.setAttribute(key, value); // Always set (adds new or updates existing)
+                }
+
+                updatedSvgString = svgDocument.toXmlString(pretty: true);
+                print("printing");
+                debugPrint(updatedSvgString, wrapWidth: 1024);
+              });
+
+              //print("Updated SVG:\n$updatedSvgString"); // Debug log
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    ),
+  );
+}
+
+
+  void _saveSvg() async {
+    // print("nefore printing");
+    //             debugPrint(updatedSvgString, wrapWidth: 1024);
+    await Future.delayed(const Duration(milliseconds: 100));
+    widget.onSave(updatedSvgString);
+    if (mounted) {
+      Navigator.pop(context, updatedSvgString);
+    }
   }
 
   @override
   void dispose() {
-    // Dispose of all controllers to prevent memory leaks
     for (var controller in textControllers.values) {
       controller.dispose();
     }
     super.dispose();
-  }
-
-//   void _saveSvg() {
-//     widget.onSave(updatedSvgString);
-//     Navigator.pop(context); // Go back after saving
-//   }
-   void _saveSvg() async {
-    await Future.delayed(Duration(milliseconds: 100)); // Ensure UI update
-    widget.onSave(updatedSvgString);
-    if (mounted) {
-      Navigator.pop(context, updatedSvgString); // Close only after sending data
-    }
   }
 
   @override
@@ -94,7 +143,7 @@ class _EditorScreenState extends State<EditorScreen> {
         children: [
           Expanded(
             flex: 3,
-            child: SvgPicture.string(updatedSvgString), // SVG Updates Dynamically
+            child: SvgPicture.string(updatedSvgString),
           ),
           Expanded(
             flex: 2,
@@ -105,7 +154,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   subtitle: TextField(
                     controller: textControllers[entry.key],
                     style: const TextStyle(color: Colors.green),
-                    textDirection: TextDirection.ltr, // Force Left-to-Right
+                    textDirection: TextDirection.ltr,
                     onChanged: (newValue) {
                       _updateMetadata(entry.key, newValue);
                     },
@@ -114,11 +163,16 @@ class _EditorScreenState extends State<EditorScreen> {
               }).toList(),
             ),
           ),
+          ElevatedButton.icon(
+            onPressed: _showAddMetadataDialog,
+            icon: const Icon(Icons.add),
+            label: const Text("Add Metadata"),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          ),
+          const SizedBox(height: 10),
           ElevatedButton(
             onPressed: _saveSvg,
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue, // Set background color to blue
-              ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
             child: const Text("Save"),
           ),
           const SizedBox(height: 20),
